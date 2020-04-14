@@ -59,25 +59,31 @@ class InfectionSpread(QMainWindow):
         with open(global_cases_path) as csvDataFile:
             csv_reader = csv.reader(csvDataFile)
             for row in csv_reader:
-              # We do not need country/province name, so we remove the first two columns
-              cases_data.append(row[2:])
+                # We do not need country/province name, so we remove the first two columns
+                if(row[2] != 0 or row[3] != 0):
+                    cases_data.append(row[2:])
         cases_data = cases_data[1:]
 
         # Read in data for global deaths
         with open(global_deaths_path) as csvDataFile:
             csv_reader = csv.reader(csvDataFile)
             for row in csv_reader:
-              deaths_data.append(row[2:])
+                if(row[2] != 0 or row[3] != 0):
+                    deaths_data.append(row[2:])
         deaths_data = deaths_data[1:]
 
         # Read in data for global recovered cases
         with open(global_recovered_path) as csvDataFile:
             csv_reader = csv.reader(csvDataFile)
             for row in csv_reader:
-              recovered_data.append(row[2:])
+                if(row[2] != 0 or row[3] != 0):    
+                    recovered_data.append(row[2:])
         recovered_data = recovered_data[1:]
 
         self.numDates = len(cases_data[0]) - 3
+        print(len(cases_data))
+        print(len(deaths_data))
+        print(len(recovered_data))
         
         # Read in satellite image and determine size of the image
         sat_reader = vtk.vtkJPEGReader()
@@ -112,27 +118,32 @@ class InfectionSpread(QMainWindow):
         sat_actor.SetTexture(texture)
         sat_actor.GetProperty().SetOpacity(0.6)
 
+        cases_actors = []
+        for i in range(len(cases_data)):
 
-        x = (sat_x / 360.0) * (180 + float(cases_data[0][1]))
-        y = (sat_y / 180.0) * (90 + float(cases_data[0][0]))
-        print("Long: " + cases_data[0][1] + " " + str(x))
-        print("Lat: " + cases_data[0][0] + " " + str(y))
-        polygonSource = vtk.vtkRegularPolygonSource()
-        polygonSource.SetNumberOfSides(50)
-        polygonSource.SetRadius(10)
-        polygonSource.SetCenter(x, y, 0)
+            x = (sat_x / 360.0) * (180 + float(cases_data[i][1]))
+            y = (sat_y / 180.0) * (90 + float(cases_data[i][0]))
 
-        polygonMapper = vtk.vtkPolyDataMapper()
-        polygonMapper.SetInputConnection(polygonSource.GetOutputPort())
+            if(int(cases_data[i][self.date+2]) > 0):
+                polygon_source = vtk.vtkRegularPolygonSource()
+                polygon_source.SetNumberOfSides(50)
+                polygon_source.SetRadius(10)
+                polygon_source.SetCenter(x, y, 0)
 
-        polygon_actor = vtk.vtkActor()
-        polygon_actor.SetMapper(polygonMapper)
+                cases_mapper = vtk.vtkPolyDataMapper()
+                cases_mapper.SetInputConnection(polygon_source.GetOutputPort())
+
+                cases_actor = vtk.vtkActor()
+                cases_actor.SetMapper(cases_mapper)
+
+                cases_actors.append(cases_actor)
 
 
         # Initialize renderer and place actors
         self.ren = vtk.vtkRenderer()
         self.ren.AddActor(sat_actor)
-        self.ren.AddActor(polygon_actor)
+        for i in range(len(cases_actors)):
+            self.ren.AddActor(cases_actors[i])
         self.ren.ResetCamera()
         self.ren.SetBackground(0.25, 0.25, 0.25)
 
