@@ -170,6 +170,7 @@ def main():
     density_scalar_bar.SetOrientationToHorizontal()
     density_scalar_bar.SetMaximumNumberOfColors(color_count)
     density_scalar_bar.SetLookupTable(density_lut)
+    density_scalar_bar.SetTitle("Density (Log 10)")
 
     # create the scalar_bar_widget
     density_scalar_bar_widget = vtk.vtkScalarBarWidget()
@@ -182,6 +183,7 @@ def main():
     climate_scalar_bar.SetOrientationToHorizontal()
     climate_scalar_bar.SetMaximumNumberOfColors(color_count)
     climate_scalar_bar.SetLookupTable(climate_lut)
+    climate_scalar_bar.SetTitle("Temparature (Celsius)")
 
     # create the scalar_bar_widget
     climate_scalar_bar_widget = vtk.vtkScalarBarWidget()
