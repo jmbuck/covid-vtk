@@ -89,6 +89,11 @@ class InfectionSpread(QMainWindow):
                 self.ren.AddActor(cases_actor)
                 actors.append(cases_actor)
     
+    def remove_case_actors(self, actors):
+        for i in range(len(actors)):
+            self.ren.RemoveActor(actors[i])
+        actors = []
+    
     def __init__(self, parent = None):
         QMainWindow.__init__(self, parent)
         self.ui = Ui_MainWindow()
@@ -112,11 +117,9 @@ class InfectionSpread(QMainWindow):
         self.infections_opacity = 1
         self.recovered_opacity = 0.75
         self.deaths_opacity = 0.5
-
-
         
         sat_path = sys.argv[1]
-        global_cases_path = sys.argv[2]
+        global_infections_path = sys.argv[2]
         global_deaths_path = sys.argv[3]
         global_recovered_path = sys.argv[4]
 
@@ -125,7 +128,7 @@ class InfectionSpread(QMainWindow):
         self.recovered_data = []
 
         # Read in data for global confirmed cases
-        with open(global_cases_path) as csvDataFile:
+        with open(global_infections_path) as csvDataFile:
             csv_reader = csv.reader(csvDataFile)
             for row in csv_reader:
                 # We do not need country/province name, so we remove the first two columns
@@ -226,23 +229,12 @@ class InfectionSpread(QMainWindow):
     def date_callback(self, val):
         self.date = val
         new_date = self.initial_date + timedelta(val)
-        # TODO: Add date change update
         self.ui.date_label.setText("Date (" + new_date.strftime('%m/%d/%Y') + "):")
 
-        # Remove old infections actors
-        for i in range(len(self.infections_actors)):
-            self.ren.RemoveActor(self.infections_actors[i])
-        self.infections_actors = []
-        
-        # Remove old recovered actors
-        for i in range(len(self.recovered_actors)):
-            self.ren.RemoveActor(self.recovered_actors[i])
-        self.recovered_actors = []
-
-        # Remove old deaths actors
-        for i in range(len(self.deaths_actors)):
-            self.ren.RemoveActor(self.deaths_actors[i])
-        self.deaths_actors = []
+        # Remove old infections, recovered, and deaths actors
+        self.remove_case_actors(self.infections_actors)
+        self.remove_case_actors(self.recovered_actors)
+        self.remove_case_actors(self.deaths_actors)
 
         # Add infections, recovered, and deaths actors
         if(self.ui.infections_check.isChecked()):
@@ -255,35 +247,26 @@ class InfectionSpread(QMainWindow):
         self.ui.vtkWidget.GetRenderWindow().Render()
 
     def infections_callback(self):
-        checkbox = self.ui.infections_check
-        if(checkbox.isChecked()):
+        if(self.ui.infections_check.isChecked()):
             self.add_case_actors(self.infections_data, self.date, self.infections_actors, self.infections_color, self.infections_max_radius, self.infections_opacity)
         else:
-            for i in range(len(self.infections_actors)):
-                self.ren.RemoveActor(self.infections_actors[i])
-            self.infections_actors = []
+            self.remove_case_actors(self.infections_actors)
 
         self.ui.vtkWidget.GetRenderWindow().Render()
 
     def recovered_callback(self):
-        checkbox = self.ui.recovered_check
-        if(checkbox.isChecked()):
+        if(self.ui.recovered_check.isChecked()):
             self.add_case_actors(self.recovered_data, self.date, self.recovered_actors, self.recovered_color, self.recovered_max_radius, self.recovered_opacity)
         else:
-            for i in range(len(self.recovered_actors)):
-                self.ren.RemoveActor(self.recovered_actors[i])
-            self.recovered_actors = []
+            self.remove_case_actors(self.recovered_actors)
 
         self.ui.vtkWidget.GetRenderWindow().Render()
 
     def deaths_callback(self):
-        checkbox = self.ui.deaths_check
-        if(checkbox.isChecked()):
+        if(self.ui.deaths_check.isChecked()):
             self.add_case_actors(self.deaths_data, self.date, self.deaths_actors, self.deaths_color, self.deaths_max_radius, self.deaths_opacity)
         else:
-            for i in range(len(self.deaths_actors)):
-                self.ren.RemoveActor(self.deaths_actors[i])
-            self.deaths_actors = []
+            self.remove_case_actors(self.deaths_actors)
 
         self.ui.vtkWidget.GetRenderWindow().Render()
     
