@@ -46,7 +46,7 @@ class InfectionSpread(QMainWindow):
                 maximum = int(data[i][date+2])
         return maximum
 
-    def add_case_actors(self, data, date):
+    def add_case_actors(self, data, date, actors, color, max_radius, opacity):
         max_cases = self.compute_max(data, self.date)
         for i in range(len(data)):
 
@@ -55,7 +55,7 @@ class InfectionSpread(QMainWindow):
             cases = int(data[i][self.date+2])
 
             if(cases > 0):
-                radius = (math.log(cases)/math.log(max_cases)) * self.max_radius 
+                radius = (math.log(cases)/math.log(max_cases)) * max_radius 
                 polygon_source = vtk.vtkRegularPolygonSource()
                 polygon_source.SetNumberOfSides(50)
                 polygon_source.SetRadius(radius)
@@ -66,9 +66,11 @@ class InfectionSpread(QMainWindow):
 
                 cases_actor = vtk.vtkActor()
                 cases_actor.SetMapper(cases_mapper)
-                cases_actor.GetProperty().SetColor(1, 0, 0)
+                cases_actor.GetProperty().SetColor(color[0], color[1], color[2])
+                cases_actor.GetProperty().SetOpacity(opacity)
+
                 self.ren.AddActor(cases_actor)
-                self.cases_actors.append(cases_actor)
+                actors.append(cases_actor)
     
     def __init__(self, parent = None):
         QMainWindow.__init__(self, parent)
@@ -76,14 +78,16 @@ class InfectionSpread(QMainWindow):
         self.date = 0
         self.initial_date = date(2020, 1, 22) + timedelta(self.date)
         self.ui.setupUi(self)
-        self.max_radius = 50
+        self.infections_max_radius = 50
+        self.recovered_max_radius = 30
+        self.deaths_max_radius = 30
         
         sat_path = sys.argv[1]
         global_cases_path = sys.argv[2]
         global_deaths_path = sys.argv[3]
         global_recovered_path = sys.argv[4]
 
-        self.cases_data = []
+        self.infections_data = []
         self.deaths_data = []
         self.recovered_data = []
 
@@ -93,8 +97,8 @@ class InfectionSpread(QMainWindow):
             for row in csv_reader:
                 # We do not need country/province name, so we remove the first two columns
                 if(row[2] != 0 or row[3] != 0):
-                    self.cases_data.append(row[2:])
-        self.cases_data = self.cases_data[1:]
+                    self.infections_data.append(row[2:])
+        self.infections_data = self.infections_data[1:]
 
         # Read in data for global deaths
         with open(global_deaths_path) as csvDataFile:
@@ -112,7 +116,7 @@ class InfectionSpread(QMainWindow):
                     self.recovered_data.append(row[2:])
         self.recovered_data = self.recovered_data[1:]
 
-        self.numDates = len(self.cases_data[0]) - 3
+        self.numDates = len(self.infections_data[0]) - 3
         
         # Read in satellite image and determine size of the image
         sat_reader = vtk.vtkJPEGReader()
@@ -151,9 +155,17 @@ class InfectionSpread(QMainWindow):
         # Initialize renderer
         self.ren = vtk.vtkRenderer()
 
-        # Add case actors for the date
-        self.cases_actors = []
-        self.add_case_actors(self.cases_data, self.date)
+        # Add infections actors for the initial date
+        self.infections_actors = []
+        self.add_case_actors(self.infections_data, self.date, self.infections_actors, (1, 0, 0), self.infections_max_radius, 1)
+
+        # Add recoveries actors for the initial date
+        self.recovered_actors = []
+        self.add_case_actors(self.recovered_data, self.date, self.recovered_actors, (0, 1, 0), self.recovered_max_radius, 0.75)
+
+        # Add death actors for the initial date
+        self.deaths_actors = []
+        self.add_case_actors(self.deaths_data, self.date, self.deaths_actors, (0, 0, 0), self.deaths_max_radius, 0.5)
         
         self.ren.AddActor(sat_actor)
         self.ren.ResetCamera()
@@ -190,11 +202,25 @@ class InfectionSpread(QMainWindow):
         # TODO: Add date change update
         self.ui.date_label.setText("Date (" + new_date.strftime('%m/%d/%Y') + "):")
 
-        for i in range(len(self.cases_actors)):
-            self.ren.RemoveActor(self.cases_actors[i])
-        self.cases_actors = []
+        # Remove old infections actors
+        for i in range(len(self.infections_actors)):
+            self.ren.RemoveActor(self.infections_actors[i])
+        self.infections_actors = []
+        
+        # Remove old recovered actors
+        for i in range(len(self.recovered_actors)):
+            self.ren.RemoveActor(self.recovered_actors[i])
+        self.recovered_actors = []
 
-        self.add_case_actors(self.cases_data, val)
+        # Remove old deaths actors
+        for i in range(len(self.deaths_actors)):
+            self.ren.RemoveActor(self.deaths_actors[i])
+        self.deaths_actors = []
+
+        # Add infections, recovered, and deaths actors
+        self.add_case_actors(self.infections_data, val, self.infections_actors, (1, 0, 0), self.infections_max_radius, 1)
+        self.add_case_actors(self.recovered_data, val, self.recovered_actors, (0, 1, 0), self.recovered_max_radius, 0.75)
+        self.add_case_actors(self.deaths_data, val, self.deaths_actors, (0, 0, 0), self.deaths_max_radius, 0.5)
         
         self.ui.vtkWidget.GetRenderWindow().Render()
 
