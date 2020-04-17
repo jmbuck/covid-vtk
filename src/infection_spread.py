@@ -1,6 +1,6 @@
 import vtk
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QSlider, QGridLayout, QLabel, QPushButton, QTextEdit
+from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QSlider, QGridLayout, QLabel, QPushButton, QTextEdit, QCheckBox
 import PyQt5.QtCore as QtCore
 from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
@@ -13,29 +13,46 @@ class Ui_MainWindow(object):
         MainWindow.setObjectName('The Main Window')
         MainWindow.setWindowTitle('Final Project - COVID-19 Infection Spread')
         
-        # in Qt, windows are made of widgets.
-        # centralWidget will contains all the other widgets
+
         self.centralWidget = QWidget(MainWindow)
-        # we will organize the contents of our setCentralWidget
-        # in a grid / table layout
         self.gridlayout = QGridLayout(self.centralWidget)
-        # vtkWidget is a widget that encapsulates a vtkRenderWindow
-        # and the associated vtkRenderWindowInteractor. We add
-        # it to centralWidget.
-        # Here is a screenshot of the layout:
-        # https://www.cs.purdue.edu/~cs530/projects/img/PyQtGridLayout.png
+
         self.vtkWidget = QVTKRenderWindowInteractor(self.centralWidget)
+
         # Sliders
         self.slider = QSlider()
 
+        # Check boxes
+        self.infections_check = QCheckBox()
+        self.recovered_check = QCheckBox()
+        self.deaths_check = QCheckBox()
+
+        self.infections_check.setChecked(MainWindow.default_infections_checked)
+        self.recovered_check.setChecked(MainWindow.default_recovered_checked)
+        self.deaths_check.setChecked(MainWindow.default_deaths_checked)
+
+        # Labels
+        self.infections_label = QLabel("Toggle Infections:")
+        self.recovered_label = QLabel("Toggle Recovered:")
+        self.deaths_label = QLabel("Toggle Deaths:")
+        self.date_label = QLabel("Date (" + MainWindow.initial_date.strftime('%m/%d/%Y') + "):")
         # We are now going to position our widgets inside our
         # grid layout. The top left corner is (0,0)
         # Here we specify that our vtkWidget is anchored to the top
         # left corner and spans 3 rows and 4 columns.
-        self.date_label = QLabel("Date (" + MainWindow.initial_date.strftime('%m/%d/%Y') + "):")
+        
+        
         self.gridlayout.addWidget(self.vtkWidget, 0, 0, 4, 4)
-        self.gridlayout.addWidget(self.date_label, 4, 0, 1, 1)
-        self.gridlayout.addWidget(self.slider, 4, 1, 1, 1)
+
+        self.gridlayout.addWidget(self.infections_label, 4, 0, 1, 1)
+        self.gridlayout.addWidget(self.infections_check, 4, 1, 1, 1)
+        self.gridlayout.addWidget(self.recovered_label, 5, 0, 1, 1)
+        self.gridlayout.addWidget(self.recovered_check, 5, 1, 1, 1)
+        self.gridlayout.addWidget(self.deaths_label, 6, 0, 1, 1)
+        self.gridlayout.addWidget(self.deaths_check, 6, 1, 1, 1)
+
+        self.gridlayout.addWidget(self.date_label, 7, 0, 1, 1)
+        self.gridlayout.addWidget(self.slider, 7, 1, 1, 1)
         MainWindow.setCentralWidget(self.centralWidget)
 
 class InfectionSpread(QMainWindow):
@@ -76,11 +93,27 @@ class InfectionSpread(QMainWindow):
         QMainWindow.__init__(self, parent)
         self.ui = Ui_MainWindow()
         self.date = 0
+        
+        self.default_infections_checked = True
+        self.default_recovered_checked = True
+        self.default_deaths_checked = True
+
         self.initial_date = date(2020, 1, 22) + timedelta(self.date)
         self.ui.setupUi(self)
+
         self.infections_max_radius = 50
         self.recovered_max_radius = 30
         self.deaths_max_radius = 30
+
+        self.infections_color = (1, 0, 0)
+        self.recovered_color = (0, 1, 0)
+        self.deaths_color = (0, 0, 0)
+
+        self.infections_opacity = 1
+        self.recovered_opacity = 0.75
+        self.deaths_opacity = 0.5
+
+
         
         sat_path = sys.argv[1]
         global_cases_path = sys.argv[2]
@@ -151,34 +184,28 @@ class InfectionSpread(QMainWindow):
         sat_actor.SetTexture(texture)
         sat_actor.GetProperty().SetOpacity(0.6)
 
-
         # Initialize renderer
         self.ren = vtk.vtkRenderer()
 
         # Add infections actors for the initial date
         self.infections_actors = []
-        self.add_case_actors(self.infections_data, self.date, self.infections_actors, (1, 0, 0), self.infections_max_radius, 1)
+        if(self.ui.infections_check.isChecked()):
+            self.add_case_actors(self.infections_data, self.date, self.infections_actors, self.infections_color, self.infections_max_radius, self.infections_opacity)
 
         # Add recoveries actors for the initial date
         self.recovered_actors = []
-        self.add_case_actors(self.recovered_data, self.date, self.recovered_actors, (0, 1, 0), self.recovered_max_radius, 0.75)
+        if(self.ui.recovered_check.isChecked()):
+            self.add_case_actors(self.recovered_data, self.date, self.recovered_actors, self.recovered_color, self.recovered_max_radius, self.recovered_opacity)
 
         # Add death actors for the initial date
         self.deaths_actors = []
-        self.add_case_actors(self.deaths_data, self.date, self.deaths_actors, (0, 0, 0), self.deaths_max_radius, 0.5)
+        if(self.ui.deaths_check.isChecked()):
+            self.add_case_actors(self.deaths_data, self.date, self.deaths_actors, self.deaths_color, self.deaths_max_radius, self.deaths_opacity)
         
         self.ren.AddActor(sat_actor)
         self.ren.ResetCamera()
+        self.ren.GetActiveCamera().Zoom(2)
         self.ren.SetBackground(0.25, 0.25, 0.25)
-
-        # Initialize camera settings
-        """
-        cam1 = ren.GetActiveCamera()
-        cam1.Azimuth(0)
-        cam1.Elevation(270)
-        cam1.Roll(360)
-        cam1.Zoom(1)
-        """
 
         self.ren.ResetCameraClippingRange()
 
@@ -218,12 +245,48 @@ class InfectionSpread(QMainWindow):
         self.deaths_actors = []
 
         # Add infections, recovered, and deaths actors
-        self.add_case_actors(self.infections_data, val, self.infections_actors, (1, 0, 0), self.infections_max_radius, 1)
-        self.add_case_actors(self.recovered_data, val, self.recovered_actors, (0, 1, 0), self.recovered_max_radius, 0.75)
-        self.add_case_actors(self.deaths_data, val, self.deaths_actors, (0, 0, 0), self.deaths_max_radius, 0.5)
+        if(self.ui.infections_check.isChecked()):
+            self.add_case_actors(self.infections_data, self.date, self.infections_actors, self.infections_color, self.infections_max_radius, self.infections_opacity)
+        if(self.ui.recovered_check.isChecked()):
+            self.add_case_actors(self.recovered_data, self.date, self.recovered_actors, self.recovered_color, self.recovered_max_radius, self.recovered_opacity)
+        if(self.ui.deaths_check.isChecked()):
+            self.add_case_actors(self.deaths_data, self.date, self.deaths_actors, self.deaths_color, self.deaths_max_radius, self.deaths_opacity)
         
         self.ui.vtkWidget.GetRenderWindow().Render()
 
+    def infections_callback(self):
+        checkbox = self.ui.infections_check
+        if(checkbox.isChecked()):
+            self.add_case_actors(self.infections_data, self.date, self.infections_actors, self.infections_color, self.infections_max_radius, self.infections_opacity)
+        else:
+            for i in range(len(self.infections_actors)):
+                self.ren.RemoveActor(self.infections_actors[i])
+            self.infections_actors = []
+
+        self.ui.vtkWidget.GetRenderWindow().Render()
+
+    def recovered_callback(self):
+        checkbox = self.ui.recovered_check
+        if(checkbox.isChecked()):
+            self.add_case_actors(self.recovered_data, self.date, self.recovered_actors, self.recovered_color, self.recovered_max_radius, self.recovered_opacity)
+        else:
+            for i in range(len(self.recovered_actors)):
+                self.ren.RemoveActor(self.recovered_actors[i])
+            self.recovered_actors = []
+
+        self.ui.vtkWidget.GetRenderWindow().Render()
+
+    def deaths_callback(self):
+        checkbox = self.ui.deaths_check
+        if(checkbox.isChecked()):
+            self.add_case_actors(self.deaths_data, self.date, self.deaths_actors, self.deaths_color, self.deaths_max_radius, self.deaths_opacity)
+        else:
+            for i in range(len(self.deaths_actors)):
+                self.ren.RemoveActor(self.deaths_actors[i])
+            self.deaths_actors = []
+
+        self.ui.vtkWidget.GetRenderWindow().Render()
+    
 if __name__=="__main__":
 
 
@@ -240,5 +303,8 @@ if __name__=="__main__":
                              # the render inside Qt
 
     window.ui.slider.valueChanged.connect(window.date_callback)
+    window.ui.infections_check.stateChanged.connect(window.infections_callback)
+    window.ui.recovered_check.stateChanged.connect(window.recovered_callback)
+    window.ui.deaths_check.stateChanged.connect(window.deaths_callback)
 
     sys.exit(app.exec_())
