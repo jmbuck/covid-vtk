@@ -6,7 +6,7 @@ from PyQt5.QtCore import Qt
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from datetime import date, timedelta
 import csv
-
+import math
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -39,21 +39,53 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralWidget)
 
 class InfectionSpread(QMainWindow):
+    def compute_max(self, data, date):
+        maximum = 0
+        for i in range(len(data)):
+            if(int(data[i][date+2]) > maximum):
+                maximum = int(data[i][date+2])
+        return maximum
+
+    def add_case_actors(self, data, date):
+        max_cases = self.compute_max(data, self.date)
+        for i in range(len(data)):
+
+            x = (self.sat_x / 360.0) * (180 + float(data[i][1]))
+            y = (self.sat_y / 180.0) * (90 + float(data[i][0]))
+            cases = int(data[i][self.date+2])
+
+            if(cases > 0):
+                radius = (math.log(cases)/math.log(max_cases)) * self.max_radius 
+                polygon_source = vtk.vtkRegularPolygonSource()
+                polygon_source.SetNumberOfSides(50)
+                polygon_source.SetRadius(radius)
+                polygon_source.SetCenter(x, y, 0)
+
+                cases_mapper = vtk.vtkPolyDataMapper()
+                cases_mapper.SetInputConnection(polygon_source.GetOutputPort())
+
+                cases_actor = vtk.vtkActor()
+                cases_actor.SetMapper(cases_mapper)
+                cases_actor.GetProperty().SetColor(1, 0, 0)
+                self.ren.AddActor(cases_actor)
+                self.cases_actors.append(cases_actor)
+    
     def __init__(self, parent = None):
         QMainWindow.__init__(self, parent)
         self.ui = Ui_MainWindow()
-        self.initial_date = date(2020, 1, 22)
-        self.ui.setupUi(self)
         self.date = 0
+        self.initial_date = date(2020, 1, 22) + timedelta(self.date)
+        self.ui.setupUi(self)
+        self.max_radius = 50
         
         sat_path = sys.argv[1]
         global_cases_path = sys.argv[2]
         global_deaths_path = sys.argv[3]
         global_recovered_path = sys.argv[4]
 
-        cases_data = []
-        deaths_data = []
-        recovered_data = []
+        self.cases_data = []
+        self.deaths_data = []
+        self.recovered_data = []
 
         # Read in data for global confirmed cases
         with open(global_cases_path) as csvDataFile:
@@ -61,44 +93,41 @@ class InfectionSpread(QMainWindow):
             for row in csv_reader:
                 # We do not need country/province name, so we remove the first two columns
                 if(row[2] != 0 or row[3] != 0):
-                    cases_data.append(row[2:])
-        cases_data = cases_data[1:]
+                    self.cases_data.append(row[2:])
+        self.cases_data = self.cases_data[1:]
 
         # Read in data for global deaths
         with open(global_deaths_path) as csvDataFile:
             csv_reader = csv.reader(csvDataFile)
             for row in csv_reader:
                 if(row[2] != 0 or row[3] != 0):
-                    deaths_data.append(row[2:])
-        deaths_data = deaths_data[1:]
+                    self.deaths_data.append(row[2:])
+        self.deaths_data = self.deaths_data[1:]
 
         # Read in data for global recovered cases
         with open(global_recovered_path) as csvDataFile:
             csv_reader = csv.reader(csvDataFile)
             for row in csv_reader:
                 if(row[2] != 0 or row[3] != 0):    
-                    recovered_data.append(row[2:])
-        recovered_data = recovered_data[1:]
+                    self.recovered_data.append(row[2:])
+        self.recovered_data = self.recovered_data[1:]
 
-        self.numDates = len(cases_data[0]) - 3
-        print(len(cases_data))
-        print(len(deaths_data))
-        print(len(recovered_data))
+        self.numDates = len(self.cases_data[0]) - 3
         
         # Read in satellite image and determine size of the image
         sat_reader = vtk.vtkJPEGReader()
         sat_reader.SetFileName(sat_path)
         sat_reader.Update()
         sat_dimensions = sat_reader.GetOutput().GetDimensions()
-        sat_x = sat_dimensions[0]
-        sat_y = sat_dimensions[1]
+        self.sat_x = sat_dimensions[0]
+        self.sat_y = sat_dimensions[1]
         
         # Create a plane to map the satellite image onto
         plane = vtk.vtkPlaneSource()
         plane.SetCenter(0.0, 0.0, 0.0)
         plane.SetNormal(0.0, 0.0, 1.0)
-        plane.SetPoint1(sat_x, 0, 0)
-        plane.SetPoint2(0, sat_y, 0)
+        plane.SetPoint1(self.sat_x, 0, 0)
+        plane.SetPoint2(0, self.sat_y, 0)
         
         # Create satellite image texture
         texture = vtk.vtkTexture()
@@ -118,32 +147,15 @@ class InfectionSpread(QMainWindow):
         sat_actor.SetTexture(texture)
         sat_actor.GetProperty().SetOpacity(0.6)
 
-        cases_actors = []
-        for i in range(len(cases_data)):
 
-            x = (sat_x / 360.0) * (180 + float(cases_data[i][1]))
-            y = (sat_y / 180.0) * (90 + float(cases_data[i][0]))
-
-            if(int(cases_data[i][self.date+2]) > 0):
-                polygon_source = vtk.vtkRegularPolygonSource()
-                polygon_source.SetNumberOfSides(50)
-                polygon_source.SetRadius(10)
-                polygon_source.SetCenter(x, y, 0)
-
-                cases_mapper = vtk.vtkPolyDataMapper()
-                cases_mapper.SetInputConnection(polygon_source.GetOutputPort())
-
-                cases_actor = vtk.vtkActor()
-                cases_actor.SetMapper(cases_mapper)
-
-                cases_actors.append(cases_actor)
-
-
-        # Initialize renderer and place actors
+        # Initialize renderer
         self.ren = vtk.vtkRenderer()
+
+        # Add case actors for the date
+        self.cases_actors = []
+        self.add_case_actors(self.cases_data, self.date)
+        
         self.ren.AddActor(sat_actor)
-        for i in range(len(cases_actors)):
-            self.ren.AddActor(cases_actors[i])
         self.ren.ResetCamera()
         self.ren.SetBackground(0.25, 0.25, 0.25)
 
@@ -178,6 +190,12 @@ class InfectionSpread(QMainWindow):
         # TODO: Add date change update
         self.ui.date_label.setText("Date (" + new_date.strftime('%m/%d/%Y') + "):")
 
+        for i in range(len(self.cases_actors)):
+            self.ren.RemoveActor(self.cases_actors[i])
+        self.cases_actors = []
+
+        self.add_case_actors(self.cases_data, val)
+        
         self.ui.vtkWidget.GetRenderWindow().Render()
 
 if __name__=="__main__":
