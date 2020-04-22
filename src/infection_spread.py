@@ -73,7 +73,6 @@ class InfectionSpread(QMainWindow):
         return maximum
 
     def add_case_actors(self, data, actors, color, opacity):
-        max_cases = self.compute_max(self.date)
         for i in range(len(data)):
 
             x = (self.sat_x / 360.0) * (180 + float(data[i][1]))
@@ -81,7 +80,7 @@ class InfectionSpread(QMainWindow):
             cases = int(data[i][self.date+2])
 
             if(cases > 0 and (float(data[i][1]) != 0 or float(data[i][0]) != 0)):
-                radius = (math.log(cases)/math.log(max_cases)) * self.max_radius 
+                radius = (math.log2(cases)/math.log2(self.max_cases)) * self.max_radius 
                 polygon_source = vtk.vtkRegularPolygonSource()
                 polygon_source.SetNumberOfSides(50)
                 polygon_source.SetRadius(radius)
@@ -103,6 +102,42 @@ class InfectionSpread(QMainWindow):
             self.ren.RemoveActor(actors[i])
         actors = []
     
+    def remove_legend_actors(self):
+        for i in range(len(self.legend_circle_actors)):
+            self.ren.RemoveActor(self.legend_circle_actors[i])
+            self.ren.RemoveActor(self.legend_text_actors[i])
+
+    def add_legend_actors(self):
+        for i in range(4):
+            cases = math.pow(2, (math.log2(self.max_cases) / (i+1)))
+            radius = (math.log2(cases)/math.log2(self.max_cases)) * self.max_radius
+            legend_polygon_source = vtk.vtkRegularPolygonSource()
+            legend_polygon_source.SetNumberOfSides(50)
+            legend_polygon_source.SetRadius(radius)
+            legend_polygon_source.SetCenter(0, 0, 0)
+
+            circle_mapper = vtk.vtkPolyDataMapper2D()
+            circle_mapper.SetInputConnection(legend_polygon_source.GetOutputPort())
+
+            circle_actor = vtk.vtkActor2D()
+            circle_actor.SetMapper(circle_mapper)
+            
+            circle_actor.GetPositionCoordinate().SetCoordinateSystemToNormalizedViewport()
+            circle_actor.GetPositionCoordinate().SetValue(.05, .1 + .075 * i)
+
+            text_actor = vtk.vtkTextActor()
+            text_actor.SetInput(str(int(cases)) + " cases")
+
+            text_actor.GetPositionCoordinate().SetCoordinateSystemToNormalizedViewport()
+            text_actor.GetPositionCoordinate().SetValue(.075, .1 + .075 * i)
+            text_actor.GetTextProperty().SetFontSize(25)
+
+            self.ren.AddActor(circle_actor)
+            self.legend_circle_actors.append(circle_actor)
+            self.ren.AddActor(text_actor)
+            self.legend_text_actors.append(text_actor)
+
+    
     def __init__(self, parent = None):
         QMainWindow.__init__(self, parent)
         self.ui = Ui_MainWindow()
@@ -115,7 +150,7 @@ class InfectionSpread(QMainWindow):
         self.initial_date = date(2020, 1, 22) + timedelta(self.date)
         self.ui.setupUi(self)
 
-        self.max_radius = 50
+        self.max_radius = 40
 
         self.infections_color = (1, 0, 0)
         self.recovered_color = (0, 1, 0)
@@ -133,6 +168,9 @@ class InfectionSpread(QMainWindow):
         self.infections_data = []
         self.deaths_data = []
         self.recovered_data = []
+
+        self.legend_circle_actors = []
+        self.legend_text_actors = []
 
         # Read in data for global confirmed cases
         with open(global_infections_path) as csvDataFile:
@@ -160,6 +198,7 @@ class InfectionSpread(QMainWindow):
         self.recovered_data = self.recovered_data[1:]
 
         self.numDates = len(self.infections_data[0]) - 3
+        self.max_cases = self.compute_max(self.date)
         
         # Read in satellite image and determine size of the image
         sat_reader = vtk.vtkJPEGReader()
@@ -196,6 +235,9 @@ class InfectionSpread(QMainWindow):
 
         # Initialize renderer
         self.ren = vtk.vtkRenderer()
+
+        # Add legend actors
+        self.add_legend_actors()
 
         # Add infections actors for the initial date
         self.infections_actors = []
@@ -242,6 +284,10 @@ class InfectionSpread(QMainWindow):
         self.remove_case_actors(self.infections_actors)
         self.remove_case_actors(self.recovered_actors)
         self.remove_case_actors(self.deaths_actors)
+        self.remove_legend_actors()
+
+        # Recompute max cases
+        self.max_cases = self.compute_max(self.date)
 
         # Add infections, recovered, and deaths actors
         if(self.ui.infections_check.isChecked()):
@@ -250,7 +296,8 @@ class InfectionSpread(QMainWindow):
             self.add_case_actors(self.recovered_data, self.recovered_actors, self.recovered_color, self.recovered_opacity)
         if(self.ui.deaths_check.isChecked()):
             self.add_case_actors(self.deaths_data, self.deaths_actors, self.deaths_color, self.deaths_opacity)
-        
+        self.add_legend_actors()
+
         self.ui.vtkWidget.GetRenderWindow().Render()
 
     def infections_callback(self):
@@ -288,9 +335,8 @@ if __name__=="__main__":
     window = InfectionSpread()
     window.ui.vtkWidget.GetRenderWindow().SetSize(1024, 768)
     window.show()
-    window.setWindowState(Qt.WindowMaximized)  # Maximize the window
-    window.iren.Initialize() # Need this line to actually show
-                             # the render inside Qt
+    window.setWindowState(Qt.WindowMaximized)
+    window.iren.Initialize() 
 
     window.ui.slider.valueChanged.connect(window.date_callback)
     window.ui.infections_check.stateChanged.connect(window.infections_callback)
