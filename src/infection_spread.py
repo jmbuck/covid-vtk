@@ -56,23 +56,32 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralWidget)
 
 class InfectionSpread(QMainWindow):
-    def compute_max(self, data, date):
+    def compute_max(self, date):
         maximum = 0
-        for i in range(len(data)):
-            if(int(data[i][date+2]) > maximum):
-                maximum = int(data[i][date+2])
+        for i in range(len(self.infections_data)):
+            if(int(self.infections_data[i][date+2]) > maximum):
+                maximum = int(self.infections_data[i][date+2])
+
+        for i in range(len(self.recovered_data)):
+            if(int(self.recovered_data[i][date+2]) > maximum):
+                maximum = int(self.recovered_data[i][date+2])
+
+        for i in range(len(self.deaths_data)):
+            if(int(self.deaths_data[i][date+2]) > maximum):
+                maximum = int(self.deaths_data[i][date+2])
+        
         return maximum
 
-    def add_case_actors(self, data, date, actors, color, max_radius, opacity):
-        max_cases = self.compute_max(data, self.date)
+    def add_case_actors(self, data, actors, color, opacity):
+        max_cases = self.compute_max(self.date)
         for i in range(len(data)):
 
             x = (self.sat_x / 360.0) * (180 + float(data[i][1]))
             y = (self.sat_y / 180.0) * (90 + float(data[i][0]))
             cases = int(data[i][self.date+2])
 
-            if(cases > 0):
-                radius = (math.log(cases)/math.log(max_cases)) * max_radius 
+            if(cases > 0 and (float(data[i][1]) != 0 or float(data[i][0]) != 0)):
+                radius = (math.log(cases)/math.log(max_cases)) * self.max_radius 
                 polygon_source = vtk.vtkRegularPolygonSource()
                 polygon_source.SetNumberOfSides(50)
                 polygon_source.SetRadius(radius)
@@ -106,15 +115,13 @@ class InfectionSpread(QMainWindow):
         self.initial_date = date(2020, 1, 22) + timedelta(self.date)
         self.ui.setupUi(self)
 
-        self.infections_max_radius = 50
-        self.recovered_max_radius = 30
-        self.deaths_max_radius = 30
+        self.max_radius = 50
 
         self.infections_color = (1, 0, 0)
         self.recovered_color = (0, 1, 0)
         self.deaths_color = (0, 0, 0)
 
-        self.infections_opacity = 1
+        self.infections_opacity = 0.9
         self.recovered_opacity = 0.75
         self.deaths_opacity = 0.5
         
@@ -193,17 +200,17 @@ class InfectionSpread(QMainWindow):
         # Add infections actors for the initial date
         self.infections_actors = []
         if(self.ui.infections_check.isChecked()):
-            self.add_case_actors(self.infections_data, self.date, self.infections_actors, self.infections_color, self.infections_max_radius, self.infections_opacity)
+            self.add_case_actors(self.infections_data, self.infections_actors, self.infections_color, self.infections_opacity)
 
         # Add recoveries actors for the initial date
         self.recovered_actors = []
         if(self.ui.recovered_check.isChecked()):
-            self.add_case_actors(self.recovered_data, self.date, self.recovered_actors, self.recovered_color, self.recovered_max_radius, self.recovered_opacity)
+            self.add_case_actors(self.recovered_data, self.recovered_actors, self.recovered_color, self.recovered_opacity)
 
         # Add death actors for the initial date
         self.deaths_actors = []
         if(self.ui.deaths_check.isChecked()):
-            self.add_case_actors(self.deaths_data, self.date, self.deaths_actors, self.deaths_color, self.deaths_max_radius, self.deaths_opacity)
+            self.add_case_actors(self.deaths_data, self.deaths_actors, self.deaths_color, self.deaths_opacity)
         
         self.ren.AddActor(sat_actor)
         self.ren.ResetCamera()
@@ -238,17 +245,17 @@ class InfectionSpread(QMainWindow):
 
         # Add infections, recovered, and deaths actors
         if(self.ui.infections_check.isChecked()):
-            self.add_case_actors(self.infections_data, self.date, self.infections_actors, self.infections_color, self.infections_max_radius, self.infections_opacity)
+            self.add_case_actors(self.infections_data, self.infections_actors, self.infections_color, self.infections_opacity)
         if(self.ui.recovered_check.isChecked()):
-            self.add_case_actors(self.recovered_data, self.date, self.recovered_actors, self.recovered_color, self.recovered_max_radius, self.recovered_opacity)
+            self.add_case_actors(self.recovered_data, self.recovered_actors, self.recovered_color, self.recovered_opacity)
         if(self.ui.deaths_check.isChecked()):
-            self.add_case_actors(self.deaths_data, self.date, self.deaths_actors, self.deaths_color, self.deaths_max_radius, self.deaths_opacity)
+            self.add_case_actors(self.deaths_data, self.deaths_actors, self.deaths_color, self.deaths_opacity)
         
         self.ui.vtkWidget.GetRenderWindow().Render()
 
     def infections_callback(self):
         if(self.ui.infections_check.isChecked()):
-            self.add_case_actors(self.infections_data, self.date, self.infections_actors, self.infections_color, self.infections_max_radius, self.infections_opacity)
+            self.add_case_actors(self.infections_data, self.infections_actors, self.infections_color, self.infections_opacity)
         else:
             self.remove_case_actors(self.infections_actors)
 
@@ -256,7 +263,7 @@ class InfectionSpread(QMainWindow):
 
     def recovered_callback(self):
         if(self.ui.recovered_check.isChecked()):
-            self.add_case_actors(self.recovered_data, self.date, self.recovered_actors, self.recovered_color, self.recovered_max_radius, self.recovered_opacity)
+            self.add_case_actors(self.recovered_data, self.recovered_actors, self.recovered_color, self.recovered_opacity)
         else:
             self.remove_case_actors(self.recovered_actors)
 
@@ -264,7 +271,7 @@ class InfectionSpread(QMainWindow):
 
     def deaths_callback(self):
         if(self.ui.deaths_check.isChecked()):
-            self.add_case_actors(self.deaths_data, self.date, self.deaths_actors, self.deaths_color, self.deaths_max_radius, self.deaths_opacity)
+            self.add_case_actors(self.deaths_data, self.deaths_actors, self.deaths_color, self.deaths_opacity)
         else:
             self.remove_case_actors(self.deaths_actors)
 
