@@ -108,6 +108,7 @@ class InfectionSpread(QMainWindow):
             self.ren.RemoveActor(self.legend_text_actors[i])
 
     def add_legend_actors(self):
+        # TODO: Potentially change scale to use hardcoded values (e.g., 5, 10, 50, 100, 500, 1000....) and pick 4 evenly spaced values from this list (all parts of this list smaller than the max_cases)
         for i in range(4):
             cases = math.pow(2, (math.log2(self.max_cases) / (i+1)))
             radius = (math.log2(cases)/math.log2(self.max_cases)) * self.max_radius
