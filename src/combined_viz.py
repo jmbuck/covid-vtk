@@ -10,6 +10,7 @@ from argparse import ArgumentParser
 import sys
 import math
 import csv
+import os
 
 frame_counter = 0
 initial_date = datetime.date(2020, 1, 22)
@@ -33,6 +34,8 @@ deaths_data = []
 
 legend_circle_actors = []
 legend_text_actors = []
+
+max_weight = 0
 
 ren = None
 
@@ -118,6 +121,62 @@ def add_legend_actors():
       ren.AddActor(text_actor)
       legend_text_actors.append(text_actor)
 
+def create_long_lat(file):
+    table = {}
+    with open(file) as csvDataFile:
+        csv_reader = csv.reader(csvDataFile)
+        for row in csv_reader:
+            try:
+                table[row[0]] = [float(row[4]), float(row[5])]
+            except ValueError:
+                continue
+    return table
+
+
+def add_migration_info(loc_src, loc_dst, weight):
+    global max_weight
+
+    x1 = (sat_x / 360.0) * (180 + float(loc_src[1]))
+    y1 = (sat_y / 180.0) * (90 + float(loc_src[0]))
+
+    x2 = (sat_x / 360.0) * (180 + float(loc_dst[1]))
+    y2 = (sat_y / 180.0) * (90 + float(loc_dst[0]))
+
+    if weight > max_weight:
+        max_weight = weight
+
+    return {"x1": x1, "x2": x2, "y1": y1, "y2": y2, "weight": weight}
+
+def process_migration_actors(migrations):
+    line_actors = []
+
+    for migration in migrations:
+        x1 = migration.get("x1")
+        y1 = migration.get("y1")
+        x2 = migration.get("x2")
+        y2 = migration.get("y2")
+        weight = migration.get("weight")
+
+        if weight < 0.05 * max_weight:
+            continue
+
+        line_source = vtk.vtkLineSource()
+        line_source.SetPoint1(x1, y1, 0)
+        line_source.SetPoint2(x2, y2, 0)
+
+        line_mapper = vtk.vtkPolyDataMapper()
+        line_mapper.SetInputConnection(line_source.GetOutputPort())
+
+        line_actor = vtk.vtkActor()
+        line_actor.SetMapper(line_mapper)
+        line_actor.GetProperty().SetColor(1, 1, 1)
+        line_actor.GetProperty().SetOpacity(0.2 + 0.79 * (weight / max_weight))
+        line_actor.GetProperty().SetLineWidth(2)
+
+        line_actors.append(line_actor)
+
+    return line_actors
+
 def main():
     # Initialize argument and constant variables
     parser = ArgumentParser("Create isosurfacing of object")
@@ -126,6 +185,8 @@ def main():
     parser.add_argument("deaths")
     parser.add_argument("density")
     parser.add_argument("climate")
+    parser.add_argument("location")
+    parser.add_argument("migration")
     parser.add_argument("sat")
     parser.add_argument("--camera", type = str, help = "Optional camera settings file")
 
@@ -150,6 +211,8 @@ def main():
 
     global legend_circle_actors
     global legend_text_actors
+
+    global max_weight
 
     global ren
 
@@ -208,6 +271,28 @@ def main():
     sat_dimensions = sat_reader.GetOutput().GetDimensions()
     sat_x = sat_dimensions[0]
     sat_y = sat_dimensions[1]
+
+    # Read in data for migration
+    location_map = create_long_lat(args.location)
+    migrations = []
+    for filename in os.listdir(args.migration):
+        if filename.endswith(".csv"):
+            with open(args.migration + "\\" + filename) as csvDataFile:
+                country = filename.split(".")[0]
+                if country not in location_map:
+                    continue
+                loc_dst = location_map[country]
+                csv_reader = csv.reader(csvDataFile)
+                for row in csv_reader:
+                    if row[2] not in location_map:
+                        continue
+                    loc_src = location_map[row[2]]
+                    try:
+                        migrations.append(add_migration_info(loc_src, loc_dst, int(row[9])))
+                    except ValueError:
+                        continue
+
+    line_actors = process_migration_actors(migrations)
 
     # Create a plane to map the satellite image onto
     plane = vtk.vtkPlaneSource()
@@ -320,6 +405,10 @@ def main():
     deaths_actors = []
     if(ui.deaths_check.isChecked()):
         add_case_actors(date, deaths_data, deaths_actors, deaths_color, deaths_opacity)
+
+    for line_actor in line_actors:
+        line_actor.VisibilityOn()
+        ren.AddActor(line_actor)
 
     ren.AddActor(sat_actor)
     ren.ResetCamera()

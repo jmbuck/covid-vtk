@@ -106,13 +106,11 @@ def main():
             with open(args.migration + "\\" + filename) as csvDataFile:
                 country = filename.split(".")[0]
                 if country not in location_map:
-                    print(country + " not in table")
                     continue
                 loc_dst = location_map[country]
                 csv_reader = csv.reader(csvDataFile)
                 for row in csv_reader:
                     if row[2] not in location_map:
-                        print(row[2] + " not in table")
                         continue
                     loc_src = location_map[row[2]]
                     try:
