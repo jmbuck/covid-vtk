@@ -184,7 +184,8 @@ def main():
     parser.add_argument("recovered")
     parser.add_argument("deaths")
     parser.add_argument("density")
-    parser.add_argument("climate")
+    parser.add_argument("climate_max")
+    parser.add_argument("climate_min")
     parser.add_argument("location")
     parser.add_argument("migration")
     parser.add_argument("sat")
@@ -260,10 +261,15 @@ def main():
     density_log.Update()
     density_range = density_log.GetOutput().GetScalarRange()
 
-    climate_reader = vtk.vtkTIFFReader()
-    climate_reader.SetFileName(args.climate + "-" + str(initial_date.month.real).zfill(2) + ".tif")
-    climate_reader.Update()
-    climate_range = climate_reader.GetOutput().GetScalarRange()
+    climate_max_reader = vtk.vtkTIFFReader()
+    climate_max_reader.SetFileName(args.climate_max + "-" + str(initial_date.month.real).zfill(2) + ".tif")
+    climate_max_reader.Update()
+    climate_max_range = [-40, 45]
+
+    climate_min_reader = vtk.vtkTIFFReader()
+    climate_min_reader.SetFileName(args.climate_min + "-" + str(initial_date.month.real).zfill(2) + ".tif")
+    climate_min_reader.Update()
+    climate_min_range = [-50, 30]
 
     sat_reader = vtk.vtkJPEGReader()
     sat_reader.SetFileName(args.sat)
@@ -351,11 +357,17 @@ def main():
     density_mapper.SetScalarRange([0, density_range[1]])
     density_mapper.Update()
 
-    climate_mapper = vtk.vtkDataSetMapper()
-    climate_mapper.SetInputConnection(climate_reader.GetOutputPort())
-    climate_mapper.SetLookupTable(climate_lut)
-    climate_mapper.SetScalarRange(climate_range)
-    climate_mapper.Update()
+    climate_max_mapper = vtk.vtkDataSetMapper()
+    climate_max_mapper.SetInputConnection(climate_max_reader.GetOutputPort())
+    climate_max_mapper.SetLookupTable(climate_lut)
+    climate_max_mapper.SetScalarRange(climate_max_range)
+    climate_max_mapper.Update()
+
+    climate_min_mapper = vtk.vtkDataSetMapper()
+    climate_min_mapper.SetInputConnection(climate_min_reader.GetOutputPort())
+    climate_min_mapper.SetLookupTable(climate_lut)
+    climate_min_mapper.SetScalarRange(climate_min_range)
+    climate_min_mapper.Update()
 
     sat_mapper = vtk.vtkPolyDataMapper()
     sat_mapper.SetInputConnection(texturePlane.GetOutputPort())
@@ -365,10 +377,15 @@ def main():
     density_actor.GetProperty().SetOpacity(0.99)
     density_actor.VisibilityOn()
 
-    climate_actor = vtk.vtkActor()
-    climate_actor.SetMapper(climate_mapper)
-    climate_actor.GetProperty().SetOpacity(0.6)
-    climate_actor.VisibilityOff()
+    climate_max_actor = vtk.vtkActor()
+    climate_max_actor.SetMapper(climate_max_mapper)
+    climate_max_actor.GetProperty().SetOpacity(0.6)
+    climate_max_actor.VisibilityOff()
+
+    climate_min_actor = vtk.vtkActor()
+    climate_min_actor.SetMapper(climate_min_mapper)
+    climate_min_actor.GetProperty().SetOpacity(0.6)
+    climate_min_actor.VisibilityOff()
 
     sat_actor = vtk.vtkActor()
     sat_actor.SetMapper(sat_mapper)
@@ -381,14 +398,16 @@ def main():
     density_actor.SetScale(crange/mrange)
 
     crange = sat_actor.GetXRange()[0] - sat_actor.GetXRange()[1]
-    mrange = climate_actor.GetXRange()[0] - climate_actor.GetXRange()[1]
-    climate_actor.SetScale(crange/mrange)
+    mrange = climate_max_actor.GetXRange()[0] - climate_max_actor.GetXRange()[1]
+    climate_max_actor.SetScale(crange/mrange)
+    climate_min_actor.SetScale(crange/mrange)
 
     # Initialize renderer and place actors
     ren = vtk.vtkRenderer()
 
     ren.AddActor(density_actor)
-    ren.AddActor(climate_actor)
+    ren.AddActor(climate_max_actor)
+    ren.AddActor(climate_min_actor)
 
     # Add legend actors
     add_legend_actors()
@@ -496,10 +515,10 @@ def main():
         new_date = initial_date + timedelta(val)
         if new_date.month.real != ui.curr_month:
             ui.curr_month = new_date.month.real
-            climate_reader.SetFileName(args.climate + "-" + str(ui.curr_month).zfill(2) + ".tif")
-            climate_reader.Update()
-            new_range = climate_reader.GetOutput().GetScalarRange()
-            climate_mapper.SetScalarRange(new_range)
+            climate_max_reader.SetFileName(args.climate_max + "-" + str(ui.curr_month).zfill(2) + ".tif")
+            climate_max_reader.Update()
+            climate_min_reader.SetFileName(args.climate_min + "-" + str(ui.curr_month).zfill(2) + ".tif")
+            climate_min_reader.Update()
         ui.date_label.setText("Date (" + new_date.strftime('%m/%d/%Y') + "):")
 
         # Remove old infections, recovered, and deaths actors
@@ -548,6 +567,8 @@ def main():
 
     def density_callback():
         if ui.density_check.isChecked():
+            ui.climate_max_check.setChecked(False)
+            ui.climate_min_check.setChecked(False)
             density_actor.VisibilityOn()
             density_scalar_bar_widget.On()
             ui.vtkWidget.GetRenderWindow().Render()
@@ -559,11 +580,25 @@ def main():
 
     def climate_max_callback():
         if ui.climate_max_check.isChecked():
-            climate_actor.VisibilityOn()
+            ui.density_check.setChecked(False)
+            ui.climate_min_check.setChecked(False)
+            climate_max_actor.VisibilityOn()
             climate_scalar_bar_widget.On()
             ui.vtkWidget.GetRenderWindow().Render()
         else:
-            climate_actor.VisibilityOff()
+            climate_max_actor.VisibilityOff()
+            climate_scalar_bar_widget.Off()
+            ui.vtkWidget.GetRenderWindow().Render()
+
+    def climate_min_callback():
+        if ui.climate_min_check.isChecked():
+            ui.density_check.setChecked(False)
+            ui.climate_max_check.setChecked(False)
+            climate_min_actor.VisibilityOn()
+            climate_scalar_bar_widget.On()
+            ui.vtkWidget.GetRenderWindow().Render()
+        else:
+            climate_min_actor.VisibilityOff()
             climate_scalar_bar_widget.Off()
             ui.vtkWidget.GetRenderWindow().Render()
 
@@ -600,6 +635,7 @@ def main():
     ui.deaths_check.stateChanged.connect(deaths_callback)
     ui.density_check.stateChanged.connect(density_callback)
     ui.climate_max_check.stateChanged.connect(climate_max_callback)
+    ui.climate_min_check.stateChanged.connect(climate_min_callback)
     ui.migration_check.stateChanged.connect(migration_callback)
 
     # Terminate setup for PyQT5 interface
