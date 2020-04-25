@@ -547,30 +547,35 @@ def main():
         ui.vtkWidget.GetRenderWindow().Render()
 
     def density_callback():
-        isOn = density_actor.GetVisibility()
-        if isOn:
-            density_actor.VisibilityOff()
-            density_scalar_bar_widget.Off()
-            ui.vtkWidget.GetRenderWindow().Render()
-            ui.push_density.setText('Enable Density')
-        else:
+        if ui.density_check.isChecked():
             density_actor.VisibilityOn()
             density_scalar_bar_widget.On()
             ui.vtkWidget.GetRenderWindow().Render()
-            ui.push_density.setText('Disable Density')
-
-    def climate_callback():
-        isOn = climate_actor.GetVisibility()
-        if isOn:
-            climate_actor.VisibilityOff()
-            climate_scalar_bar_widget.Off()
-            ui.vtkWidget.GetRenderWindow().Render()
-            ui.push_climate.setText('Enable Temperature')
         else:
+            density_actor.VisibilityOff()
+            density_scalar_bar_widget.Off()
+            ui.vtkWidget.GetRenderWindow().Render()
+
+
+    def climate_max_callback():
+        if ui.climate_max_check.isChecked():
             climate_actor.VisibilityOn()
             climate_scalar_bar_widget.On()
             ui.vtkWidget.GetRenderWindow().Render()
-            ui.push_climate.setText('Disable Temperature')
+        else:
+            climate_actor.VisibilityOff()
+            climate_scalar_bar_widget.Off()
+            ui.vtkWidget.GetRenderWindow().Render()
+
+    def migration_callback():
+        if ui.migration_check.isChecked():
+            for line_actor in line_actors:
+                line_actor.VisibilityOn()
+            ui.vtkWidget.GetRenderWindow().Render()
+        else:
+            for line_actor in line_actors:
+                line_actor.VisibilityOff()
+            ui.vtkWidget.GetRenderWindow().Render()
 
     # Handle screenshot button event
     def screenshot_callback():
@@ -593,9 +598,9 @@ def main():
     ui.infections_check.stateChanged.connect(infections_callback)
     ui.recovered_check.stateChanged.connect(recovered_callback)
     ui.deaths_check.stateChanged.connect(deaths_callback)
-
-    ui.push_density.clicked.connect(density_callback)
-    ui.push_climate.clicked.connect(climate_callback)
+    ui.density_check.stateChanged.connect(density_callback)
+    ui.climate_max_check.stateChanged.connect(climate_max_callback)
+    ui.migration_check.stateChanged.connect(migration_callback)
 
     # Terminate setup for PyQT5 interface
     sys.exit(app.exec_())
@@ -608,6 +613,10 @@ class Ui_MainWindow(object):
         self.default_infections_checked = True
         self.default_recovered_checked = True
         self.default_deaths_checked = True
+        self.default_density_checked = True
+        self.default_climate_max_checked = False
+        self.default_climate_min_checked = False
+        self.default_migration_checked = True
 
         self.centralWidget = QWidget(MainWindow)
         self.gridlayout = QGridLayout(self.centralWidget)
@@ -640,35 +649,56 @@ class Ui_MainWindow(object):
         self.infections_check = QCheckBox()
         self.recovered_check = QCheckBox()
         self.deaths_check = QCheckBox()
+        self.density_check = QCheckBox()
+        self.climate_max_check = QCheckBox()
+        self.climate_min_check = QCheckBox()
+        self.migration_check = QCheckBox()
 
         self.infections_check.setChecked(self.default_infections_checked)
         self.recovered_check.setChecked(self.default_recovered_checked)
         self.deaths_check.setChecked(self.default_deaths_checked)
+        self.density_check.setChecked(self.default_density_checked)
+        self.climate_max_check.setChecked(self.default_climate_max_checked)
+        self.climate_min_check.setChecked(self.default_climate_min_checked)
+        self.migration_check.setChecked(self.default_migration_checked)
 
         # Labels
         self.infections_label = QLabel("Toggle Infections:")
         self.recovered_label = QLabel("Toggle Recovered:")
         self.deaths_label = QLabel("Toggle Deaths:")
-        self.date_label = QLabel("Date (" + initial_date.strftime('%m/%d/%Y') + "):")
+        self.density_label = QLabel("Toggle Density:")
+        self.climate_max_label = QLabel("Toggle Climate Max:")
+        self.climate_min_label = QLabel("Toggle Climate Min:")
+        self.migration_label = QLabel("Toggle Migration:")
+        self.date_label = QLabel("Date: " + initial_date.strftime('%m/%d/%Y'))
+        self.time_label = QLabel("Adjust Date:")
         self.curr_month = initial_date.month.real
 
-        self.gridlayout.addWidget(self.vtkWidget, 0, 0, 4, 4)
+        self.gridlayout.addWidget(self.vtkWidget, 0, 0, 4, 5)
         
-        self.gridlayout.addWidget(self.infections_label, 4, 0, 1, 1)
-        self.gridlayout.addWidget(self.infections_check, 4, 1, 1, 1)
-        self.gridlayout.addWidget(self.recovered_label, 5, 0, 1, 1)
-        self.gridlayout.addWidget(self.recovered_check, 5, 1, 1, 1)
-        self.gridlayout.addWidget(self.deaths_label, 6, 0, 1, 1)
-        self.gridlayout.addWidget(self.deaths_check, 6, 1, 1, 1)
+        self.gridlayout.addWidget(self.infections_label, 5, 0, 1, 1)
+        self.gridlayout.addWidget(self.infections_check, 5, 1, 1, 1)
+        self.gridlayout.addWidget(self.recovered_label, 6, 0, 1, 1)
+        self.gridlayout.addWidget(self.recovered_check, 6, 1, 1, 1)
+        self.gridlayout.addWidget(self.deaths_label, 7, 0, 1, 1)
+        self.gridlayout.addWidget(self.deaths_check, 7, 1, 1, 1)
+        self.gridlayout.addWidget(self.migration_label, 8, 0, 1, 1)
+        self.gridlayout.addWidget(self.migration_check, 8, 1, 1, 1)
 
-        self.gridlayout.addWidget(self.date_label, 7, 0, 1, 1)
-        self.gridlayout.addWidget(self.time_slider, 7, 1, 1, 1)
-        self.gridlayout.addWidget(self.push_density, 4, 4, 1, 1)
-        self.gridlayout.addWidget(self.push_climate, 4, 5, 1, 1)
-        self.gridlayout.addWidget(self.push_screenshot, 0, 4, 1, 1)
-        self.gridlayout.addWidget(self.push_camera, 0, 5, 1, 1)
-        self.gridlayout.addWidget(self.camera_info, 2, 4, 1, 2)
-        self.gridlayout.addWidget(self.log, 3, 4, 1, 2)
+        self.gridlayout.addWidget(self.density_label, 5, 2, 1, 1)
+        self.gridlayout.addWidget(self.density_check, 5, 3, 1, 1)
+        self.gridlayout.addWidget(self.climate_max_label, 6, 2, 1, 1)
+        self.gridlayout.addWidget(self.climate_max_check, 6, 3, 1, 1)
+        self.gridlayout.addWidget(self.climate_min_label, 7, 2, 1, 1)
+        self.gridlayout.addWidget(self.climate_min_check, 7, 3, 1, 1)
+
+        self.gridlayout.addWidget(self.date_label, 4, 0, 1, 1)
+        self.gridlayout.addWidget(self.time_label, 4, 2, 1, 1)
+        self.gridlayout.addWidget(self.time_slider, 4, 3, 1, 1)
+        self.gridlayout.addWidget(self.push_screenshot, 0, 5, 1, 1)
+        self.gridlayout.addWidget(self.push_camera, 0, 6, 1, 1)
+        self.gridlayout.addWidget(self.camera_info, 2, 5, 1, 2)
+        self.gridlayout.addWidget(self.log, 3, 5, 1, 2)
         MainWindow.setCentralWidget(self.centralWidget)
 
 def save_frame(camera, window, log):
