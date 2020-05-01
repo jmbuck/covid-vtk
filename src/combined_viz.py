@@ -12,12 +12,12 @@ import math
 import csv
 import os
 
-frame_counter = 0
+frame_counter = 3
 initial_date = datetime.date(2020, 1, 22)
 sat_x = 0
 sat_y = 0
 max_cases = 0
-max_radius = 40
+max_radius = 100
 date = 0
 
 infections_color = (1, 0, 0)
@@ -94,7 +94,7 @@ def add_legend_actors():
   # TODO: Potentially change scale to use hardcoded values (e.g., 5, 10, 50, 100, 500, 1000....) and pick 4 evenly spaced values from this list (all parts of this list smaller than the max_cases)
   for i in range(4):
       cases = math.pow(2, (math.log2(max_cases) / (i+1)))
-      radius = (math.log2(cases)/math.log2(max_cases)) * max_radius
+      radius = (math.log2(cases)/math.log2(max_cases)) * max_radius/3.8
       legend_polygon_source = vtk.vtkRegularPolygonSource()
       legend_polygon_source.SetNumberOfSides(50)
       legend_polygon_source.SetRadius(radius)
