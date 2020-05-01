@@ -12,7 +12,7 @@ import math
 import csv
 import os
 
-frame_counter = 0
+frame_counter = 3
 initial_date = datetime.date(2020, 1, 22)
 sat_x = 0
 sat_y = 0
