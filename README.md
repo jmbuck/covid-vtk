@@ -1,5 +1,5 @@
 Usage: 
-`python combined_viz.py <infections-data-path> <recovered-data-path> <density-path> <max-climate-path> <min-climate-path> countries.csv <migration-data-path>`
+`python combined_viz.py <infections-data-path> <recovered-data-path> <deaths-data-path> <density-path> <max-climate-path> <min-climate-path> countries.csv <migration-data-path>`
 
 For infection data, we used global recoveries, infections, and deaths time series from Johns Hopkins Univeristy:
 https://github.com/CSSEGISandData/COVID-19/tree/master/csse_covid_19_data/csse_covid_19_time_series
