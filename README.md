@@ -1,3 +1,5 @@
+Please view the project report for project information. Below is information on the datasets we used.
+
 Usage: 
 `python combined_viz.py <infections-data-path> <recovered-data-path> <deaths-data-path> <density-path> <max-climate-path> <min-climate-path> countries.csv <migration-data-path>`
 
@@ -15,3 +17,6 @@ For climate data, we used data from WorldClim:
 https://www.worldclim.org/data/monthlywth.html
 
 We specifically used the tmin_2010-2018 and tmax_2010-2018 datasets from this page, and manually removed 2010-2017 years from the datasets.
+
+The migration data was manually compiled from the following dataset and is included in this repo.
+https://www.un.org/en/development/desa/population/migration/data/empirical2/migrationflows.asp
