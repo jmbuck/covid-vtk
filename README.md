@@ -15,3 +15,8 @@ For climate data, we used data from WorldClim:
 https://www.worldclim.org/data/monthlywth.html
 
 We specifically used the tmin_2010-2018 and tmax_2010-2018 datasets from this page, and manually removed 2010-2017 years from the datasets.
+
+The path for climate data should also include the beggining portion of each file up to the "-XX.tif in the climate data directory. For example, if the path is /climate/climate-max-01.tif for the January file, use /climate/climate-max for the path.
+
+For migration data, use the provided migration directory, the data was converted to csv from Excel from:
+https://www.un.org/en/development/desa/population/migration/data/empirical2/migrationflows.asp#
