@@ -23,4 +23,9 @@ The path for <max-climate-path> and <min-climate-path> should also include the b
 For migration data, use the provided migration directory, the data was converted to csv from Excel from:
 https://www.un.org/en/development/desa/population/migration/data/empirical2/migrationflows.asp#
 
+Example call: 
+
+`python .\combined_viz.py ..\data\time_series\time_series_covid19_confirmed_global.csv ..\data\time_series\time_series_covid19_recovered_global.csv ..\data\time_series\time_series_covid19_deaths_global.csv ..\data\density.tif ..\data\climate-max\climate ..\data\climate-min\climate ..\data\countries.csv ..\data\migration  ..\data\satellite.jpg`
+
+
 The satellite image is the same one provided for Project 1, download and use one of those images for the <satellite-image-path>
