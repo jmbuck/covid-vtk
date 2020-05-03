@@ -1,7 +1,7 @@
 Please view the project report for project information. Below is information on the datasets we used.
 
 Usage: 
-`python combined_viz.py <infections-data-path> <recovered-data-path> <deaths-data-path> <density-path> <max-climate-path> <min-climate-path> countries.csv <migration-data-path>`
+`python combined_viz.py <infections-data-path> <recovered-data-path> <deaths-data-path> <density-path> <max-climate-path> <min-climate-path> <countries-csv-path> <migration-data-path> <satellite-image-path>`
 
 For infection data, we used global recoveries, infections, and deaths time series from Johns Hopkins Univeristy:
 https://github.com/CSSEGISandData/COVID-19/tree/master/csse_covid_19_data/csse_covid_19_time_series
@@ -22,3 +22,5 @@ The path for <max-climate-path> and <min-climate-path> should also include the b
 
 For migration data, use the provided migration directory, the data was converted to csv from Excel from:
 https://www.un.org/en/development/desa/population/migration/data/empirical2/migrationflows.asp#
+
+The satellite image is the same one provided for Project 1, download and use one of those images for the <satellite-image-path>
